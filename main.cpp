@@ -72,6 +72,7 @@ void loop() {
   }
 }
 
+//primer File para los archivos en la SD 
 void abrirYMostrarArchivo(const char* nombreArchivo) {
   file = SD.open(nombreArchivo);
   if (file) {
