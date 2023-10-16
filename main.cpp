@@ -3,15 +3,21 @@
 #include <SD.h>
 
 File file;
+File imageFile; // Un único objeto File para lectura y escritura
+#define SD_CHIP_SELECT  5
+String imageText = ""; // Variable para almacenar el texto de la imagen
+bool creatingImage = false; // Variable para rastrear si estamos creando una imagen
 
-const int SD_CHIP_SELECT = 5; // Pin CS/SS de la tarjeta SD
-
-//Configuración del menu para el usuario
 void setup() {
   Serial.begin(115200);
-  Serial.println("Bienvenido al Menú ESP32");
+  pinMode(SD_CHIP_SELECT, OUTPUT);
+  while (!Serial) {
+    ;
+  }
+
+  Serial.println("Bienvenido al Menú");
   Serial.println("Seleccione una opción:");
-  Serial.println("1. Abrir archivo 1");
+  Serial.println("1. Abrir archivo 1: Mario Bros");
   Serial.println("2. Abrir archivo 2");
   Serial.println("3. Abrir archivo 3");
   Serial.println("4. Crear y guardar una imagen");
@@ -22,31 +28,46 @@ void setup() {
   }
 }
 
-//Dentro del loop de ecnuentra la función para selaccionar la
-//opcion y el despliegue de los archivos.
 void loop() {
   if (Serial.available() > 0) {
     char opcion = Serial.read();
     switch (opcion) {
       case '1':
         Serial.println("Seleccionó la Opción 1 - Abriendo archivo 1");
-        abrirYMostrarArchivo("archivo1.txt");
+        abrirYMostrarArchivo("/ascii-art.txt");
         break;
       case '2':
         Serial.println("Seleccionó la Opción 2 - Abriendo archivo 2");
-        abrirYMostrarArchivo("archivo2.txt");
+        abrirYMostrarArchivo("/ascii-art (1).txt");
         break;
       case '3':
         Serial.println("Seleccionó la Opción 3 - Abriendo archivo 3");
-        abrirYMostrarArchivo("archivo3.txt");
+        abrirYMostrarArchivo("/ascii-art (2).txt");
         break;
       case '4':
         Serial.println("Seleccionó la Opción 4 - Crear y guardar una imagen");
         crearYGuardarImagen();
         break;
       default:
-        Serial.println("Opción no válida. Por favor, seleccione 1, 2, 3 o 4.");
+        if (creatingImage) {
+          imageText += opcion; // Agregar el carácter al texto de la imagen en curso
+        } else {
+          Serial.println("Opción no válida. Por favor, seleccione 1, 2, 3 o 4.");
+        }
         break;
+    }
+  }
+
+  if (creatingImage && imageText.endsWith("guardar\n")) {
+    imageText.trim(); // Eliminar la cadena "GUARDAR\n" del texto de la imagen
+    if (imageFile) {
+      imageFile.print(imageText);
+      imageFile.close();
+      Serial.println("Imagen guardada.");
+      creatingImage = false;
+      imageText = "";
+    } else {
+      Serial.println("Error al guardar la imagen.");
     }
   }
 }
@@ -64,30 +85,7 @@ void abrirYMostrarArchivo(const char* nombreArchivo) {
 }
 
 void crearYGuardarImagen() {
-  Serial.println("Ingrese el contenido de la imagen (termina con una línea en blanco):");
-
-  String contenidoImagen = "";
-  while (true) {
-    if (Serial.available() > 0) {
-      char c = Serial.read();
-      if (c == '\n') {
-        break;
-      }
-      contenidoImagen += c;
-    }
-  }
-
-  if (contenidoImagen.length() > 0) {
-    String nombreArchivo = "imagen_personalizada.txt";
-    file = SD.open(nombreArchivo, FILE_WRITE);
-    if (file) {
-      file.println(contenidoImagen);
-      file.close();
-      Serial.println("Imagen guardada como " + nombreArchivo);
-    } else {
-      Serial.println("Error al guardar la imagen.");
-    }
-  } else {
-    Serial.println("La imagen está vacía y no se guardará.");
-  }
+  Serial.println("Ingrese el texto de la imagen. Para guardar, ingrese 'guardar'.");
+  creatingImage = true;
+  imageFile = SD.open("imagen.txt", FILE_WRITE);
 }
